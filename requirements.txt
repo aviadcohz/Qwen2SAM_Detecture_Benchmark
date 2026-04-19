@@ -1,0 +1,19 @@
+# Core ML
+torch>=2.3
+transformers>=4.46
+
+# Qwen3-VL tokenizer/image utils
+sentencepiece
+tiktoken
+qwen-vl-utils
+
+# Vision / IO
+opencv-python-headless
+Pillow
+numpy
+
+# Matching + metrics
+scipy
+
+# Visualization
+matplotlib
