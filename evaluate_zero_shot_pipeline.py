@@ -872,8 +872,11 @@ def main():
     print(f"[data] dataset={dataset_name}  schema={schema}  "
           f"n={len(samples)}  metadata={metadata_path}")
 
-    sam3 = load_sam3(device)
+    # Load Qwen FIRST — building SAM3 from HF before Qwen has been observed
+    # to leave CUDA state that triggers a gather-kernel OOB on Qwen's first
+    # generate() call on some transformers/torch combinations on 179.
     qwen, qwen_proc = load_qwen_vlm(device, model_name=args.qwen_model)
+    sam3 = load_sam3(device)
 
     results = []
     t0 = time.time()
