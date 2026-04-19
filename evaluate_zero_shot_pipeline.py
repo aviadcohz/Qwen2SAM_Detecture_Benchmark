@@ -265,22 +265,35 @@ def generate_descriptions(
     qwen, processor, image_pil: Image.Image, device: torch.device,
     k: int, max_new_tokens: int = 700,
 ) -> str:
+    """
+    Use Qwen's official `qwen_vl_utils.process_vision_info` path so the chat
+    template and image tensors stay in lock-step. The bare `{"type": "image"}`
+    placeholder pattern can desync the image-grid-thw positional indices on
+    newer transformers and crash CUDA with a gather-kernel OOB.
+    """
+    from qwen_vl_utils import process_vision_info
+
     user_prompt = build_user_prompt(k)
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": [
-            {"type": "image"},
+            {"type": "image", "image": image_pil},
             {"type": "text", "text": user_prompt},
         ]},
     ]
     text = processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True,
     )
+    image_inputs, video_inputs = process_vision_info(messages)
     inputs = processor(
-        text=[text], images=[image_pil], return_tensors="pt", padding=True,
+        text=[text],
+        images=image_inputs,
+        videos=video_inputs,
+        return_tensors="pt",
+        padding=True,
     )
     inputs.pop("token_type_ids", None)
-    inputs = {k: v.to(device) for k, v in inputs.items()}
+    inputs = {key: v.to(device) for key, v in inputs.items()}
     output_ids = qwen.generate(
         **inputs, max_new_tokens=max_new_tokens,
         do_sample=False, temperature=1.0,
